@@ -15,7 +15,9 @@ ALTER TABLE documents
 
 -- Convert the legacy 'type' ENUM column to TEXT so it no longer blocks inserts
 -- (the app doesn't write to it, but keeping it as a strict ENUM can cause errors)
-ALTER TABLE documents
-  ALTER COLUMN type TYPE TEXT USING type::TEXT;
+-- Must drop the column default first — it depends on the enum type.
+ALTER TABLE documents ALTER COLUMN type DROP DEFAULT;
+ALTER TABLE documents ALTER COLUMN type TYPE TEXT USING type::TEXT;
+ALTER TABLE documents ALTER COLUMN type SET DEFAULT 'other';
 
 DROP TYPE IF EXISTS document_type;
