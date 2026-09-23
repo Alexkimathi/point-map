@@ -1,0 +1,48 @@
+name: Database Backup
+
+on:
+  schedule:
+    - cron: '0 2 * * 0'  # Every Sunday at 2am UTC
+  workflow_dispatch:       # Allow manual trigger from GitHub Actions tab
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write      # Needed to create GitHub Releases
+
+    steps:
+      - name: Set backup date
+        run: echo "DATE=$(date +%Y-%m-%d)" >> $GITHUB_ENV
+
+      - name: Install PostgreSQL 17 client
+        run: |
+          sudo apt-get install -y curl ca-certificates
+          curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo gpg --dearmor -o /usr/share/keyrings/postgresql.gpg
+          echo "deb [signed-by=/usr/share/keyrings/postgresql.gpg] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client-17
+
+      - name: Create database dump
+        env:
+          DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          PGSSLMODE=require /usr/lib/postgresql/17/bin/pg_dump "$DATABASE_URL" \
+            --clean --no-acl --no-owner \
+            | gzip > backup-${{ env.DATE }}.sql.gz
+
+          # Fail if backup is empty (less than 100 bytes)
+          SIZE=$(wc -c < backup-${{ env.DATE }}.sql.gz)
+          echo "Backup size: $SIZE bytes"
+          if [ "$SIZE" -lt 100 ]; then
+            echo "ERROR: Backup file is empty — pg_dump likely failed"
+            exit 1
+          fi
+
+      - name: Upload backup to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: backup-${{ env.DATE }}
+          name: "DB Backup ${{ env.DATE }}"
+          body: "Automated weekly database backup."
+          files: backup-${{ env.DATE }}.sql.gz
