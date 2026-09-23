@@ -114,8 +114,10 @@ export default async function SurveyJobDetailPage({ params }: { params: Promise<
   const totalLpos = (lpos ?? []).reduce((s, l) => s + l.total, 0)
   const surveyFee = job?.quoted_amount ?? 0
   const totalCosts = totalExpenses + totalLpos
-  const netMargin = surveyFee - totalCosts
-  const marginPct = surveyFee > 0 ? (netMargin / surveyFee) * 100 : null
+  // Use actual invoiced amount as revenue; fall back to quoted amount if no invoices yet
+  const revenue = totalInvoiced > 0 ? totalInvoiced : surveyFee
+  const netMargin = revenue - totalCosts
+  const marginPct = revenue > 0 ? (netMargin / revenue) * 100 : null
 
   return (
     <div className="p-4 md:p-6 max-w-5xl mx-auto">
