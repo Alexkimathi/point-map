@@ -521,7 +521,7 @@ const lpoSchema = z.object({
   issued_date: z.string().optional(),
   tax: z.coerce.number().min(0).max(100).default(0),
   notes: z.string().optional(),
-  items: z.string().transform((v) => { try { return JSON.parse(v) } catch { return [] } }),
+  line_items: z.string().transform((v) => { try { return JSON.parse(v) } catch { return [] } }),
 })
 
 function calcLpoTotals(items: unknown[], taxPct: number) {
@@ -543,15 +543,15 @@ export async function createLpoAction(
   const parsed = lpoSchema.safeParse(raw)
   if (!parsed.success) return { error: parsed.error.issues[0].message }
 
-  const { tax, items, supplier_name, job_type, job_id, issued_date, notes } = parsed.data
-  const { subtotal, total } = calcLpoTotals(items as unknown[], tax)
+  const { tax, line_items, supplier_name, job_type, job_id, issued_date, notes } = parsed.data
+  const { subtotal, total } = calcLpoTotals(line_items as unknown[], tax)
 
   const db = createServiceClient()
   const lpoResult = await insertLpo(db, {
     supplier_name,
     job_type: job_type || null,
     job_id: job_id || null,
-    items,
+    items: line_items,
     subtotal,
     tax,
     total,
@@ -578,13 +578,13 @@ export async function updateLpoAction(
   const parsed = lpoSchema.safeParse(raw)
   if (!parsed.success) return { error: parsed.error.issues[0].message }
 
-  const { tax, items, supplier_name, job_type, job_id, issued_date, notes } = parsed.data
-  const { subtotal, total } = calcLpoTotals(items as unknown[], tax)
+  const { tax, line_items, supplier_name, job_type, job_id, issued_date, notes } = parsed.data
+  const { subtotal, total } = calcLpoTotals(line_items as unknown[], tax)
 
   const db = createServiceClient()
   const { error } = await db.from('lpos').update({
     supplier_name, job_type: job_type || null, job_id: job_id || null,
-    items, subtotal, tax, total, issued_date: issued_date || null, notes: notes || null,
+    items: line_items, subtotal, tax, total, issued_date: issued_date || null, notes: notes || null,
   }).eq('id', id)
 
   if (error) return { error: error.message }
