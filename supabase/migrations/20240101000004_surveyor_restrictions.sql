@@ -5,7 +5,7 @@
 
 -- Helper: returns the current user's role as text
 -- (CREATE OR REPLACE is safe to re-run)
-DROP FUNCTION IF EXISTS get_user_role();
+DROP FUNCTION IF EXISTS get_user_role() CASCADE;
 CREATE OR REPLACE FUNCTION get_user_role()
 RETURNS text
 LANGUAGE sql

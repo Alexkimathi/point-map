@@ -1,0 +1,19 @@
+#!/bin/bash
+mkdir -p supabase/migrations
+cp supabase/schema.sql supabase/migrations/20240101000000_schema.sql
+cp supabase/002_documents_equipment_timesheets.sql supabase/migrations/20240101000002_documents_equipment_timesheets.sql
+cp supabase/003_storage_buckets.sql supabase/migrations/20240101000003_storage_buckets.sql
+cp supabase/004_surveyor_restrictions.sql supabase/migrations/20240101000004_surveyor_restrictions.sql
+cp supabase/005_survey_quoted_amount.sql supabase/migrations/20240101000005_survey_quoted_amount.sql
+cp supabase/006_survey_fee_audit.sql supabase/migrations/20240101000006_survey_fee_audit.sql
+cp supabase/007_construction_type_text.sql supabase/migrations/20240101000007_construction_type_text.sql
+cp supabase/008_survey_type_text.sql supabase/migrations/20240101000008_survey_type_text.sql
+cp supabase/009_fix_job_no_sequences.sql supabase/migrations/20240101000009_fix_job_no_sequences.sql
+cp supabase/010_fix_doc_no_sequences.sql supabase/migrations/20240101000010_fix_doc_no_sequences.sql
+cp supabase/011_atomic_doc_creation.sql supabase/migrations/20240101000011_atomic_doc_creation.sql
+cp supabase/012_plots_module.sql supabase/migrations/20240101000012_plots_module.sql
+cp supabase/013_reservation_documents.sql supabase/migrations/20240101000013_reservation_documents.sql
+cp supabase/014_bank_accounts_quote_fields.sql supabase/migrations/20240101000014_bank_accounts_quote_fields.sql
+cp supabase/015_quote_bank_details.sql supabase/migrations/20240101000015_quote_bank_details.sql
+echo "Done! Files in supabase/migrations:"
+ls supabase/migrations/
