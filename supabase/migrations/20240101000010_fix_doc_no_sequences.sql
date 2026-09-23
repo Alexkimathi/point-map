@@ -1,4 +1,35 @@
 -- ============================================================
+-- Create finance_documents table (invoices + quotations unified)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS finance_documents (
+  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  type         TEXT NOT NULL CHECK (type IN ('Invoice', 'Quotation')),
+  doc_no       TEXT,
+  client_id    UUID REFERENCES clients(id) ON DELETE SET NULL,
+  job_type     TEXT,
+  job_id       UUID,
+  due_date     DATE,
+  tax          NUMERIC DEFAULT 0,
+  amount       NUMERIC DEFAULT 0,
+  total        NUMERIC DEFAULT 0,
+  line_items   JSONB,
+  notes        TEXT,
+  status       TEXT NOT NULL DEFAULT 'Draft',
+  created_by   UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at   TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TRIGGER trg_finance_documents_updated_at
+  BEFORE UPDATE ON finance_documents
+  FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+ALTER TABLE finance_documents ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "finance_documents_all" ON finance_documents
+  FOR ALL TO authenticated USING (true) WITH CHECK (true);
+
+-- ============================================================
 -- Fix doc_no / lpo_no generation for finance_documents and lpos
 --
 -- Root cause: triggers used COUNT(*)+1 (breaks on deletion) and
@@ -49,30 +80,6 @@ CREATE TRIGGER trg_finance_doc_no
   WHEN (NEW.doc_no IS NULL OR NEW.doc_no = '')
   EXECUTE FUNCTION finance_doc_set_doc_no();
 
--- 2. Fix and recreate the LPO trigger function (safety net)
-CREATE OR REPLACE FUNCTION lpo_set_lpo_no()
-RETURNS TRIGGER LANGUAGE plpgsql AS $$
-DECLARE
-  yr  TEXT;
-  seq INT;
-BEGIN
-  IF NEW.lpo_no IS NULL OR NEW.lpo_no = '' THEN
-    yr := TO_CHAR(NOW(), 'YYYY');
-    SELECT COALESCE(
-      MAX(CAST(SPLIT_PART(lpo_no, '-', 3) AS INTEGER)), 0
-    ) + 1
-    INTO seq
-    FROM lpos
-    WHERE lpo_no LIKE 'LPO-' || yr || '-%';
-    NEW.lpo_no := 'LPO-' || yr || '-' || LPAD(seq::TEXT, 3, '0');
-  END IF;
-  RETURN NEW;
-END;
-$$;
-
-DROP TRIGGER IF EXISTS trg_lpo_set_lpo_no ON lpos;
-CREATE TRIGGER trg_lpo_set_lpo_no
-  BEFORE INSERT ON lpos FOR EACH ROW EXECUTE FUNCTION lpo_set_lpo_no();
 
 -- 3. Advisory-locked RPC: generate next doc_no atomically
 --    Called directly from the app — race-condition safe.
@@ -104,26 +111,6 @@ BEGIN
 END;
 $$;
 
--- 4. Advisory-locked RPC: generate next lpo_no atomically
-CREATE OR REPLACE FUNCTION generate_lpo_no()
-RETURNS TEXT LANGUAGE plpgsql SECURITY DEFINER AS $$
-DECLARE
-  v_year   TEXT := TO_CHAR(now(), 'YYYY');
-  v_prefix TEXT := 'LPO-' || TO_CHAR(now(), 'YYYY') || '-';
-  v_seq    INT;
-BEGIN
-  PERFORM pg_advisory_xact_lock(hashtext('lpo_no_' || v_year));
-
-  SELECT COALESCE(
-    MAX(CAST(SPLIT_PART(lpo_no, '-', 3) AS INTEGER)), 0
-  ) + 1
-  INTO v_seq
-  FROM lpos
-  WHERE lpo_no LIKE v_prefix || '%';
-
-  RETURN v_prefix || LPAD(v_seq::TEXT, 3, '0');
-END;
-$$;
 
 -- 5. Clean up any stale empty-string doc_nos left from the broken trigger
 --    ONLY deletes Draft documents with doc_no = '' — edit this if needed.

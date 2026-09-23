@@ -25,7 +25,7 @@ USING (
     WHEN 'surveyor' THEN
       id IN (
         SELECT job_id FROM job_team
-        WHERE user_id = auth.uid() AND job_type = 'survey'
+        WHERE user_id = auth.uid()
       )
     ELSE true
   END
@@ -55,33 +55,3 @@ CREATE POLICY "expenses_delete" ON expenses
 FOR DELETE TO authenticated
 USING (get_user_role() IN ('admin', 'manager', 'accountant'));
 
--- ── 3. LPOs: surveyors cannot read LPO data ──────────────────
-ALTER TABLE lpos ENABLE ROW LEVEL SECURITY;
-
-DROP POLICY IF EXISTS "lpos_select" ON lpos;
-DROP POLICY IF EXISTS "lpos_insert" ON lpos;
-DROP POLICY IF EXISTS "lpos_update" ON lpos;
-DROP POLICY IF EXISTS "lpos_delete" ON lpos;
-
-CREATE POLICY "lpos_select" ON lpos
-FOR SELECT TO authenticated
-USING (get_user_role() IN ('admin', 'manager', 'accountant', 'site_engineer'));
-
-CREATE POLICY "lpos_insert" ON lpos
-FOR INSERT TO authenticated
-WITH CHECK (get_user_role() IN ('admin', 'manager', 'accountant'));
-
-CREATE POLICY "lpos_update" ON lpos
-FOR UPDATE TO authenticated
-USING (get_user_role() IN ('admin', 'manager', 'accountant'));
-
-CREATE POLICY "lpos_delete" ON lpos
-FOR DELETE TO authenticated
-USING (get_user_role() IN ('admin', 'manager', 'accountant'));
-
--- ── 4. Finance documents: surveyors cannot access invoices/quotations
-DROP POLICY IF EXISTS "finance_documents_select" ON finance_documents;
-
-CREATE POLICY "finance_documents_select" ON finance_documents
-FOR SELECT TO authenticated
-USING (get_user_role() IN ('admin', 'manager', 'accountant', 'site_engineer'));
