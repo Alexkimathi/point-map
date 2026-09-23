@@ -47,7 +47,7 @@ export async function createUserAction(
     user_metadata: { full_name: parsed.data.full_name },
   })
 
-  if (createError) return { error: createError.message }
+  if (createError) return { error: createError.message || 'Failed to create user account. Please try again.' }
   if (!created.user) return { error: 'User creation failed' }
 
   // Upsert profile with role and details
@@ -60,10 +60,11 @@ export async function createUserAction(
   })
 
   if (profileError) {
-    if (profileError.message.includes('role_check') || profileError.message.includes('check constraint')) {
+    const msg = profileError.message || profileError.details || 'Profile setup failed'
+    if (msg.includes('role_check') || msg.includes('check constraint')) {
       return { error: 'Please select a valid role.' }
     }
-    return { error: 'User account was created but profile setup failed. Please contact support.' }
+    return { error: `User account was created but profile setup failed: ${msg}` }
   }
 
   revalidatePath('/settings/users')
