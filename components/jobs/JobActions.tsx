@@ -94,22 +94,13 @@ export function JobActions({ jobId, jobType, userRole, deleteAction, archiveActi
   return (
     <div className="flex items-center gap-2">
       {error && <span className="text-sm text-red-600">{error}</span>}
-      {isAdmin && (
+      {(isAdmin || isManager) && (
         <button
           onClick={() => setConfirming('delete')}
           className="inline-flex items-center gap-1.5 text-sm text-red-600 hover:text-red-700 hover:bg-red-50 px-3 py-1.5 rounded-md border border-red-200 transition-colors"
         >
           <Trash2 className="w-4 h-4" />
           Delete
-        </button>
-      )}
-      {isManager && (
-        <button
-          onClick={() => setConfirming('archive')}
-          className="inline-flex items-center gap-1.5 text-sm text-gray-600 hover:text-gray-700 hover:bg-gray-50 px-3 py-1.5 rounded-md border border-gray-200 transition-colors"
-        >
-          <EyeOff className="w-4 h-4" />
-          Hide
         </button>
       )}
     </div>
